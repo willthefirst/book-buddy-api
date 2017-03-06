@@ -1,0 +1,27 @@
+{
+  "name": "book-buddy-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Will Moritz",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
+    "body-parser": "^1.17.1",
+    "cookie-parser": "^1.4.3",
+    "crypto": "0.0.3",
+    "dotenv": "^4.0.0",
+    "express": "^4.15.2",
+    "express-session": "^1.15.1",
+    "jsonwebtoken": "^7.3.0",
+    "mongoose": "^4.8.6",
+    "morgan": "^1.8.1",
+    "passport": "^0.3.2",
+    "passport-jwt": "^2.2.1",
+    "passport-local": "^1.0.0"
+  }
+}
