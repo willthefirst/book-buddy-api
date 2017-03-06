@@ -30,8 +30,6 @@ app.use(session({
 app.use(passport.initialize())
 app.use(passport.session())
 
-
-console.log("CLIENTURL", process.env.CLIENT_URL)
 // Add headers
 app.use(function (req, res, next) {
     // Website you wish to allow to connect
