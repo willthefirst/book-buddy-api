@@ -4,7 +4,6 @@ const logger = require('morgan')
 const path = require('path')
 const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
-const session = require('express-session')
 const cookieParser = require('cookie-parser')
 const router = require('./router')
 const passport = require('passport')
@@ -20,13 +19,10 @@ passport.deserializeUser(function (user, done) {
 
 const app = express()
 
-app.use(logger('dev')) // Log requests to API using morgan
+app.use(logger('dev'))
 app.use(cookieParser(process.env.SERVER_SECRET))
-app.use(bodyParser.json()) // support json encoded bodies
-app.use(bodyParser.urlencoded({ extended: true })) // support encoded bodie
-app.use(session({
-  secret: process.env.SERVER_SECRET
-}))
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }))
 app.use(passport.initialize())
 app.use(passport.session())
 
@@ -53,13 +49,12 @@ app.use(function (req, res, next) {
 router(app)
 
 // Database
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1/book-buddy')
+mongoose.connect(process.env.MONGODB_URI)
 const db = mongoose.connection
-db.on('error', console.error.bind(console, 'connection error:'))
+db.on('error', console.error.bind(console, 'Connection error:'))
 db.once('open', function () {
-  // we're connected!
-  console.log('connected to database')
+  console.log('Connected to database at', process.env.MONGODB_URI)
 })
 
-app.listen( process.env.PORT || 3000)
-console.log(`Server is now running at http://localhost:${process.env.PORT || 3000}.`)
+app.listen(process.env.PORT)
+console.log(`Server is now running at http://localhost:${process.env.PORT}.`)
