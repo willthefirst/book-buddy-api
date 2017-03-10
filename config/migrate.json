@@ -1,0 +1,4 @@
+{
+  "dbConnectionUri": "mongodb://127.0.0.1/book-buddy",
+  "es6": true
+}

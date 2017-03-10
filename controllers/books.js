@@ -82,13 +82,13 @@ exports.createBook = function (req, res) {
   })
 }
 
-function extractProgress (progressArray, bookId) {
-  let slimProgress = []
+function extractDailies (dailies, bookId) {
+  let slimDailies = []
 
   // Get only entries that correspond to the book_id
-  progressArray.forEach((entry) => {
+  dailies.forEach((entry) => {
     if (entry.book_id.toString() === bookId.toString()) {
-      slimProgress.push({
+      slimDailies.push({
         date: entry.date,
         currentPage: entry.currentPage
       })
@@ -96,19 +96,19 @@ function extractProgress (progressArray, bookId) {
   })
 
   // Sort entries by date #todo does this need to happen here?
-  slimProgress.sort(function (a, b) {
+  slimDailies.sort(function (a, b) {
     return b.date - a.date
   })
 
   // Reformat date once sorted
-  slimProgress = slimProgress.map((entry) => {
+  slimDailies = slimDailies.map((entry) => {
     return {
       currentPage: entry.currentPage,
       date: moment(entry.date).format('MM/DD/YYYY')
     }
   })
 
-  return slimProgress
+  return slimDailies
 }
 
 // Find the current book
@@ -120,13 +120,13 @@ exports.getBook = function (req, res) {
       return (item.book_id.toString() === req.params.id.toString())
     })
 
-    const slimProgress = extractProgress(req.user.progress, req.params.id)
+    const slimDailies = extractDailies(req.user.dailies, req.params.id)
 
     // Respond with a combined book object with all the info the client needs
     res.send({
       status: bookPersonal.status[0],
       totalPages: bookPersonal.totalPages,
-      progress: slimProgress,
+      dailies: slimDailies,
       notes: bookPersonal.notes,
       _id: bookGeneral._id,
       thumbnailUrl: bookGeneral.thumbnailUrl,
@@ -139,9 +139,9 @@ exports.getBook = function (req, res) {
   })
 }
 
-// Add a progress entry to a given book
-exports.updateProgress = function (req, res) {
-  const progressEntry = req.body
+// Add a daily to a given book
+exports.updateDailies = function (req, res) {
+  const newDaily = req.body
 
   // Construct query
   const query = {
@@ -150,10 +150,10 @@ exports.updateProgress = function (req, res) {
   }
 
   // Apply the update and respond
-  User.findOneAndUpdate(query, { $push: { progress: progressEntry } }, { new: true }, function (err, updatedUser) {
+  User.findOneAndUpdate(query, { $push: { dailies: newDaily } }, { new: true }, function (err, updatedUser) {
     if (err) return console.error(err)
-    const newProgress = extractProgress(updatedUser.progress, req.params.id)
-    res.send(newProgress)
+    const freshDailies = extractDailies(updatedUser.dailies, req.params.id)
+    res.send(freshDailies)
   })
 }
 

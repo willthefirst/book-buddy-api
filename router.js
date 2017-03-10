@@ -51,7 +51,7 @@ module.exports = function (app) {
   apiRoutes.get('/book/:id', requireAuth, BooksController.getBook)
 
   // PUT: update the current book
-  apiRoutes.put('/book/:id/progress', requireAuth, BooksController.updateProgress)
+  apiRoutes.put('/book/:id/dailies', requireAuth, BooksController.updateDailies)
 
   // PUT: update the current book
   apiRoutes.put('/book/:id', requireAuth, BooksController.updateBook)

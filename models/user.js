@@ -4,23 +4,6 @@ const bcrypt = require('bcrypt-nodejs')
 
 mongoose.Promise = global.Promise
 
-const EntrySchema = new Schema({
-  date: {
-    type: Date,
-    required: true
-  },
-  book_id: {
-    type: Schema.Types.ObjectId,
-    required: true
-  },
-  currentPage: {
-    type: Number,
-    required: true
-  }
-}, {
-  timestamps: true
-})
-
 const BookPersonalSchema = new Schema({
   book_id: {
     type: Schema.Types.ObjectId,
@@ -61,9 +44,22 @@ const UserSchema = new Schema({
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   books: [BookPersonalSchema],
-  progress:  [EntrySchema]
-}, {
-  timestamps: true
+  dailies:  [{
+    date: {
+      type: Date,
+      required: true
+    },
+    book_id: {
+      type: Schema.Types.ObjectId,
+      required: true
+    },
+    currentPage: {
+      type: Number,
+      required: true
+    }
+  }, {
+    timestamps: true
+  }]
 })
 
 // Pre-save of user to database, hash password if password is modified or new
