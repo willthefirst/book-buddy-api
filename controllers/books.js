@@ -161,9 +161,11 @@ exports.updateDailies = function (req, res) {
 exports.getDailies = function (req, res) {
   const dateQuery = moment(req.params.date)
 
+  // Set date boundaries
   const dateMax = dateQuery
   const dateMin = moment(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
 
+  // Filter through all users dailies to return ones that fall within date range
   const matchingDailies = req.user.dailies.filter((daily) => {
     date = moment(daily.date)
     if (date.isSameOrBefore(dateMax) && date.isSameOrAfter(dateMin)) {
@@ -172,19 +174,6 @@ exports.getDailies = function (req, res) {
   })
 
   res.send(matchingDailies)
-  // console.log(dateQuery);
-  // Construct query
-  // const query = {
-  //   '_id': req.user._id,
-  //   'dailies.date': {
-  //     $gte: dateMin
-  //   }
-  // }
-  //
-  // User.find(query, 'dailies.$', function (err, result) {
-  //   if (err) return console.error(err)
-  //   res.send(result)
-  // })
 
   // 1) BOOKS PROGRESS ENTRY
   // dailies/:date
