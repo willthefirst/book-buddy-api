@@ -38,6 +38,7 @@ module.exports = function (app) {
   // =========================
 
   // '/api/books/'
+  // =========================
 
   // Get all user books
   apiRoutes.get('/books', requireAuth, BooksController.getAllBooks)
@@ -46,6 +47,7 @@ module.exports = function (app) {
   apiRoutes.post('/books', requireAuth, BooksController.createBook)
 
   // '/api/books/:id'
+  // =========================
 
   // Single book route
   apiRoutes.get('/book/:id', requireAuth, BooksController.getBook)
@@ -58,4 +60,10 @@ module.exports = function (app) {
 
   // DELETE: get the current book
   apiRoutes.delete('/book/:id', requireAuth, BooksController.deleteBook)
+
+  // '/api/daily/:date'
+  // =========================
+  apiRoutes.get('/daily/:date', requireAuth, BooksController.getDailies)
+
+
 }

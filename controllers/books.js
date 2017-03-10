@@ -157,6 +157,52 @@ exports.updateDailies = function (req, res) {
   })
 }
 
+// Get dailies around a given date
+exports.getDailies = function (req, res) {
+  const dateQuery = moment(req.params.date)
+
+  const dateMax = dateQuery
+  const dateMin = moment(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
+
+  const matchingDailies = req.user.dailies.filter((daily) => {
+    date = moment(daily.date)
+    if (date.isSameOrBefore(dateMax) && date.isSameOrAfter(dateMin)) {
+      return daily
+    }
+  })
+
+  res.send(matchingDailies)
+  // console.log(dateQuery);
+  // Construct query
+  // const query = {
+  //   '_id': req.user._id,
+  //   'dailies.date': {
+  //     $gte: dateMin
+  //   }
+  // }
+  //
+  // User.find(query, 'dailies.$', function (err, result) {
+  //   if (err) return console.error(err)
+  //   res.send(result)
+  // })
+
+  // 1) BOOKS PROGRESS ENTRY
+  // dailies/:date
+    // get all entries where entry.date matches params.date
+      // if no entries (ie. date has not been logged)
+        // books = user.books.current
+      // if entries exists for params.date (ie. date has been logged previously)
+        // books = entries.forEach(book)
+    // (always provide option to add an outside book to today's entry...)
+
+
+
+  // 2) PROGRESS View
+    // load last 30 days of entries
+      // when user clicks on a day,
+        // push to dailies:/date
+}
+
 // Update the current book
 exports.updateBook = function (req, res) {
   const requestedUpdate = req.body
