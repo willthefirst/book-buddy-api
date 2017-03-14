@@ -62,7 +62,7 @@ module.exports = function (app) {
   // =========================
 
   // GET: get dailies for a user
-  apiRoutes.get('/daily/:date', requireAuth, BooksController.getDailiesByDate)
+  apiRoutes.get('/dailies', requireAuth, BooksController.getDailiesByDate)
 
   // POST: create a daily
   apiRoutes.post('/dailies', requireAuth, BooksController.createDaily)

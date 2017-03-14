@@ -169,15 +169,34 @@ exports.createDaily = function (req, res) {
 
   let savedDaily
 
+  let queryOptions = {
+    path: 'dailies',
+    match: {},
+    options: {
+      sort: { date: -1 }
+    }
+  }
+
+  // If request specifies a minimum date, only retrieve dailies after that date
+  if (req.body.filterByThisBook) {
+    queryOptions.match['book_id'] = req.body.book_id
+  }
+
   // Save Daily document
   newDaily.save().then((newDaily) => {
     // Save daily to scope so we can respond with it
     savedDaily = newDaily
 
     // Add daily to User document
-    return User.findByIdAndUpdate(req.user._id, { $push: { dailies: savedDaily._id } })
-  }).then((oldUser) => {
-    res.send(savedDaily)
+    return User.findByIdAndUpdate(
+      req.user._id,
+      { $push: { dailies: savedDaily._id } },
+      { new: true })
+      .populate(queryOptions)
+      .exec()
+  }).then((newUser) => {
+    console.log(newUser);
+    res.send(newUser.dailies)
   }).catch((error) => {
     console.log(error)
     return res.status(404).send({ message: error })
@@ -209,35 +228,49 @@ exports.updateDaily = function (req, res) {
 }
 
 // Get dailies around a given date
+// Params allowed:
+  // date: doesn't do anything yet!
+  // dateMin: only return dailies after this date, defaults to none
+  // bookID: only return dailies for this book, defaults none
 exports.getDailiesByDate = function (req, res) {
-  const dateQuery = moment.utc(new Date(req.params.date))
+  const dateQuery = moment.utc(req.query.date) || moment.utc()
 
-  const dateMax = dateQuery
-  const dateMin = moment.utc(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
+  let queryOptions = {
+    path: 'dailies',
+    select: ['_id', 'date', 'book_id', 'currentPage'],
+    options: {
+      sort: { date: -1 }
+    },
+    match: {},
+    populate: {
+      path: 'book_id',
+      select: ['thumbnailUrl', 'title', 'authors']
+    }
+  }
 
+  // If request specifies a minimum date, only retrieve dailies after that date
+  if (req.query.dateMin) {
+    queryOptions.match['date'] = {
+      '$gt': moment.utc(req.query.dateMin)
+    }
+  }
+
+  // If request specifies dailies for a particular book,
+  // only return dailies for that book
+  if (req.query.bookId) {
+    queryOptions.match['book_id'] = req.query.bookId
+  }
+
+  // Get dailies from specific user
   User
     .findOne({ '_id': req.user._id }, 'books dailies')
-    .populate({
-      path: 'dailies',
-      select: ['_id', 'date', 'book_id', 'currentPage'],
-      match: {
-        'date' : {
-          '$gt': dateMin
-        }
-      },
-      options: {
-        sort: { date: -1 }
-      },
-      populate: {
-        path: 'book_id',
-        select: ['thumbnailUrl', 'title', 'authors']
-      }
-    })
+    .populate(queryOptions)
     .populate({
       path: 'books.book_id',
       select: ['thumbnailUrl', 'title', 'authors']
     })
-    .exec(function (err, user) {
+    .exec()
+    .then((user) => {
       // // Get user's current books
       // const currentBooks = [];
       //
@@ -251,6 +284,7 @@ exports.getDailiesByDate = function (req, res) {
       //     })
       //   }
       // })
+
       const dailies = user.dailies.map((daily) => {
         return {
           daily_id: daily._id,
@@ -264,68 +298,9 @@ exports.getDailiesByDate = function (req, res) {
       })
 
       res.send(dailies);
-
-      // Get dailiesRange and todayRange
-      // const dateQuery = moment.utc(req.params.date)
-      //
-      // // Set date boundaries
-      // const dateMax = dateQuery
-      // const dateMin = moment.utc(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
-      //
-      // // Filter through all users dailies to return ones that fall within date range
-      // const dailiesMatch = []
-      // const dailiesRange = []
-      //
-      // user.dailies.forEach((daily) => {
-      //   const date = moment.utc(daily.date)
-      //
-      //   // If user has a daily that matches date query,
-      //   if (date.isSame(dateQuery, 'day')) {
-      //     dailiesMatch.push({
-      //       daily_id: daily._id,
-      //       date: daily.date,
-      //       book_id: daily.book_id._id,
-      //       thumbnailUrl: daily.book_id.thumbnailUrl,
-      //       authors: daily.book_id.authors,
-      //       title: daily.book_id.title,
-      //       currentPage: daily.currentPage
-      //     })
-      //   }
-      //
-      //   if (date.isSameOrAfter(dateMin) && date.isSameOrBefore(dateMax)) {
-      //     dailiesRange.push({
-      //       date: daily.date,
-      //       book_id: daily.book_id._id,
-      //       thumbnailUrl: daily.book_id.thumbnailUrl,
-      //       authors: daily.book_id.authors,
-      //       title: daily.book_id.title,
-      //       currentPage: daily.currentPage
-      //     })
-      //   }
-      // })
-
-      // res.send({
-      //   currentBooks: currentBooks,
-      //   dailiesRange: dailiesRange,
-      //   dailiesMatch: dailiesMatch
-      // })
+    }).catch(function (error) {
+      return res.status(404).send({ message: error })
     })
-
-  // 1) BOOKS PROGRESS ENTRY
-  // dailies/:date
-    // get all entries where entry.date matches params.date
-      // if no entries for current date (ie. date has not been logged)
-        // books = user.books.current
-      // if entries exists for params.date (ie. date has been logged previously)
-        // books = entries.forEach(book)
-    // (always provide option to add an outside book to today's entry...)
-
-
-
-  // 2) PROGRESS View
-    // load last 30 days of entries
-      // when user clicks on a day,
-        // push to dailies:/date
 }
 
 // Update the current book
