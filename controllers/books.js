@@ -12,11 +12,9 @@ exports.getAllBooks = function (req, res) {
       select: ['thumbnailUrl', 'title', 'authors']
     })
     .exec(function (err, user) {
-      // console.log('Books found:', user);
       if (err) return console.error(err)
-      // #todo: could avoid this by writing the write mongodb/mongoose query
+
       let results = user.books.map(function (book) {
-        console.log('Book', book)
         return {
           _id: book.book_id._id,
           title: book.book_id.title,
@@ -212,75 +210,105 @@ exports.updateDaily = function (req, res) {
 
 // Get dailies around a given date
 exports.getDailiesByDate = function (req, res) {
+  const dateQuery = moment.utc(new Date(req.params.date))
+
+  const dateMax = dateQuery
+  const dateMin = moment.utc(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
+
   User
     .findOne({ '_id': req.user._id }, 'books dailies')
     .populate({
-      path: 'dailies.book_id',
-      select: ['thumbnailUrl', 'title', 'authors']
+      path: 'dailies',
+      select: ['_id', 'date', 'book_id', 'currentPage'],
+      match: {
+        'date' : {
+          '$gt': dateMin
+        }
+      },
+      options: {
+        sort: { date: -1 }
+      },
+      populate: {
+        path: 'book_id',
+        select: ['thumbnailUrl', 'title', 'authors']
+      }
     })
     .populate({
       path: 'books.book_id',
       select: ['thumbnailUrl', 'title', 'authors']
     })
     .exec(function (err, user) {
-      // Get user's current books
-      const currentBooks = [];
-
-      user.books.forEach((book) => {
-        if (book.status[0] === "Current") {
-          currentBooks.push({
-            book_id: book.book_id._id,
-            thumbnailUrl: book.book_id.thumbnailUrl,
-            authors: book.book_id.authors,
-            title: book.book_id.title
-          })
+      // // Get user's current books
+      // const currentBooks = [];
+      //
+      // user.books.forEach((book) => {
+      //   if (book.status[0] === "Current") {
+      //     currentBooks.push({
+      //       book_id: book.book_id._id,
+      //       thumbnailUrl: book.book_id.thumbnailUrl,
+      //       authors: book.book_id.authors,
+      //       title: book.book_id.title
+      //     })
+      //   }
+      // })
+      const dailies = user.dailies.map((daily) => {
+        return {
+          daily_id: daily._id,
+          date: daily.date,
+          book_id: daily.book_id._id,
+          thumbnailUrl: daily.book_id.thumbnailUrl,
+          authors: daily.book_id.authors,
+          title: daily.book_id.title,
+          currentPage: daily.currentPage
         }
       })
+
+      res.send(dailies);
 
       // Get dailiesRange and todayRange
-      const dateQuery = moment.utc(req.params.date)
+      // const dateQuery = moment.utc(req.params.date)
+      //
+      // // Set date boundaries
+      // const dateMax = dateQuery
+      // const dateMin = moment.utc(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
+      //
+      // // Filter through all users dailies to return ones that fall within date range
+      // const dailiesMatch = []
+      // const dailiesRange = []
+      //
+      // user.dailies.forEach((daily) => {
+      //   const date = moment.utc(daily.date)
+      //
+      //   // If user has a daily that matches date query,
+      //   if (date.isSame(dateQuery, 'day')) {
+      //     dailiesMatch.push({
+      //       daily_id: daily._id,
+      //       date: daily.date,
+      //       book_id: daily.book_id._id,
+      //       thumbnailUrl: daily.book_id.thumbnailUrl,
+      //       authors: daily.book_id.authors,
+      //       title: daily.book_id.title,
+      //       currentPage: daily.currentPage
+      //     })
+      //   }
+      //
+      //   if (date.isSameOrAfter(dateMin) && date.isSameOrBefore(dateMax)) {
+      //     dailiesRange.push({
+      //       date: daily.date,
+      //       book_id: daily.book_id._id,
+      //       thumbnailUrl: daily.book_id.thumbnailUrl,
+      //       authors: daily.book_id.authors,
+      //       title: daily.book_id.title,
+      //       currentPage: daily.currentPage
+      //     })
+      //   }
+      // })
 
-      // Set date boundaries
-      const dateMax = dateQuery
-      const dateMin = moment.utc(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
-
-      // Filter through all users dailies to return ones that fall within date range
-      const dailiesMatch = []
-      const dailiesRange = []
-
-      user.dailies.forEach((daily) => {
-        const date = moment.utc(daily.date)
-
-        // If user has a daily that matches date query,
-        if (date.isSame(dateQuery, 'day')) {
-          dailiesMatch.push({
-            daily_id: daily._id,
-            date: daily.date,
-            book_id: daily.book_id._id,
-            thumbnailUrl: daily.book_id.thumbnailUrl,
-            authors: daily.book_id.authors,
-            title: daily.book_id.title,
-            currentPage: daily.currentPage
-          })
-        }
-
-        if (date.isSameOrAfter(dateMin) && date.isSameOrBefore(dateMax)) {
-          dailiesRange.push({
-            date: daily.date,
-            book_id: daily.book_id._id,
-            thumbnailUrl: daily.book_id.thumbnailUrl,
-            authors: daily.book_id.authors,
-            title: daily.book_id.title,
-            currentPage: daily.currentPage
-          })
-        }
-      })
-
-      res.send({
-        currentBooks: currentBooks,
-        dailiesRange: dailiesRange,
-        dailiesMatch: dailiesMatch
-      })
+      // res.send({
+      //   currentBooks: currentBooks,
+      //   dailiesRange: dailiesRange,
+      //   dailiesMatch: dailiesMatch
+      // })
     })
 
   // 1) BOOKS PROGRESS ENTRY
