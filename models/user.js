@@ -51,6 +51,7 @@ const UserSchema = new Schema({
     },
     book_id: {
       type: Schema.Types.ObjectId,
+      ref: 'Book',
       required: true
     },
     currentPage: {

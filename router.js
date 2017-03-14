@@ -49,11 +49,8 @@ module.exports = function (app) {
   // '/api/books/:id'
   // =========================
 
-  // Single book route
+  // GET: get a single book
   apiRoutes.get('/book/:id', requireAuth, BooksController.getBook)
-
-  // PUT: update the current book
-  apiRoutes.put('/book/:id/dailies', requireAuth, BooksController.updateDailies)
 
   // PUT: update the current book
   apiRoutes.put('/book/:id', requireAuth, BooksController.updateBook)
@@ -61,9 +58,14 @@ module.exports = function (app) {
   // DELETE: get the current book
   apiRoutes.delete('/book/:id', requireAuth, BooksController.deleteBook)
 
-  // '/api/daily/:date'
+  // Dailies
   // =========================
   apiRoutes.get('/daily/:date', requireAuth, BooksController.getDailies)
 
+  // POST: create a daily
+  apiRoutes.post('/dailies', requireAuth, BooksController.createDaily)
+
+  // PUT: update a daily
+  apiRoutes.put('/dailies/:id', requireAuth, BooksController.updateDaily)
 
 }

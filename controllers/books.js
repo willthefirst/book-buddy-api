@@ -82,13 +82,15 @@ exports.createBook = function (req, res) {
   })
 }
 
-function extractDailies (dailies, bookId) {
+function extractDailiesByBook (dailies, bookId) {
   let slimDailies = []
 
   // Get only entries that correspond to the book_id
   dailies.forEach((entry) => {
     if (entry.book_id.toString() === bookId.toString()) {
       slimDailies.push({
+        daily_id: entry._id,
+        book_id: entry.book_id,
         date: entry.date,
         currentPage: entry.currentPage
       })
@@ -103,11 +105,13 @@ function extractDailies (dailies, bookId) {
   // Reformat date once sorted
   slimDailies = slimDailies.map((entry) => {
     return {
+      daily_id: entry.daily_id,
+      book_id: entry.book_id,
       currentPage: entry.currentPage,
       date: moment(entry.date).format('MM/DD/YYYY')
     }
   })
-
+  // console.log(slimDailies);
   return slimDailies
 }
 
@@ -120,7 +124,7 @@ exports.getBook = function (req, res) {
       return (item.book_id.toString() === req.params.id.toString())
     })
 
-    const slimDailies = extractDailies(req.user.dailies, req.params.id)
+    const slimDailies = extractDailiesByBook(req.user.dailies, req.params.id)
 
     // Respond with a combined book object with all the info the client needs
     res.send({
@@ -140,45 +144,127 @@ exports.getBook = function (req, res) {
 }
 
 // Add a daily to a given book
-exports.updateDailies = function (req, res) {
-  const newDaily = req.body
+exports.createDaily = function (req, res) {
+  const newDaily = {
+    date: req.body.date,
+    book_id: req.body.book_id,
+    currentPage: req.body.currentPage
+  }
 
   // Construct query
   const query = {
-    '_id': req.user._id,
-    'books.book_id': req.params.id
+    '_id': req.user._id
   }
 
   // Apply the update and respond
   User.findOneAndUpdate(query, { $push: { dailies: newDaily } }, { new: true }, function (err, updatedUser) {
     if (err) return console.error(err)
-    const freshDailies = extractDailies(updatedUser.dailies, req.params.id)
+    const freshDailies = extractDailiesByBook(updatedUser.dailies, newDaily.book_id)
     res.send(freshDailies)
+  })
+}
+
+// Update a daily that already exists
+exports.updateDaily = function (req, res) {
+  const updateCurrentPage = req.body.currentPage
+
+  // Construct query
+  const query = {
+    '_id': req.user._id,
+    'dailies._id': req.params.id
+  }
+
+  // console.log(query);
+
+  // Apply the update and respond
+  User.findOneAndUpdate(query, { $set: { 'dailies.$.currentPage': updateCurrentPage } }, { new: true }, function (err, updatedUser) {
+    if (err) return console.error(err)
+    // console.log(updatedUser);
+    const updatedDaily = updatedUser.dailies.find( (daily) => {
+      return daily._id.toString() === req.params.id.toString()
+    })
+
+    res.send(updatedDaily)
   })
 }
 
 // Get dailies around a given date
 exports.getDailies = function (req, res) {
-  const dateQuery = moment(req.params.date)
+  User
+    .findOne({ '_id': req.user._id }, 'books dailies')
+    .populate({
+      path: 'dailies.book_id',
+      select: ['thumbnailUrl', 'title', 'authors']
+    })
+    .populate({
+      path: 'books.book_id',
+      select: ['thumbnailUrl', 'title', 'authors']
+    })
+    .exec(function (err, user) {
+      // Get user's current books
+      const currentBooks = [];
 
-  // Set date boundaries
-  const dateMax = dateQuery
-  const dateMin = moment(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
+      user.books.forEach((book) => {
+        if (book.status[0] === "Current") {
+          currentBooks.push({
+            book_id: book.book_id._id,
+            thumbnailUrl: book.book_id.thumbnailUrl,
+            authors: book.book_id.authors,
+            title: book.book_id.title
+          })
+        }
+      })
 
-  // Filter through all users dailies to return ones that fall within date range
-  const matchingDailies = req.user.dailies.filter((daily) => {
-    date = moment(daily.date)
-    if (date.isSameOrBefore(dateMax) && date.isSameOrAfter(dateMin)) {
-      return daily
-    }
-  })
+      // Get dailiesRange and todayRange
+      const dateQuery = moment.utc(req.params.date)
 
-  res.send(matchingDailies)
+      // Set date boundaries
+      const dateMax = dateQuery
+      const dateMin = moment.utc(dateQuery.clone().add(-30, 'days')) // clone is become moment() objects are mutable
+
+      // Filter through all users dailies to return ones that fall within date range
+      const dailiesMatch = []
+      const dailiesRange = []
+
+      user.dailies.forEach((daily) => {
+        const date = moment.utc(daily.date)
+
+        // If user has a daily that matches date query,
+        if (date.isSame(dateQuery, 'day')) {
+          dailiesMatch.push({
+            daily_id: daily._id,
+            date: daily.date,
+            book_id: daily.book_id._id,
+            thumbnailUrl: daily.book_id.thumbnailUrl,
+            authors: daily.book_id.authors,
+            title: daily.book_id.title,
+            currentPage: daily.currentPage
+          })
+        }
+
+        if (date.isSameOrAfter(dateMin) && date.isSameOrBefore(dateMax)) {
+          dailiesRange.push({
+            date: daily.date,
+            book_id: daily.book_id._id,
+            thumbnailUrl: daily.book_id.thumbnailUrl,
+            authors: daily.book_id.authors,
+            title: daily.book_id.title,
+            currentPage: daily.currentPage
+          })
+        }
+      })
+
+      res.send({
+        currentBooks: currentBooks,
+        dailiesRange: dailiesRange,
+        dailiesMatch: dailiesMatch
+      })
+    })
 
   // 1) BOOKS PROGRESS ENTRY
   // dailies/:date
     // get all entries where entry.date matches params.date
-      // if no entries (ie. date has not been logged)
+      // if no entries for current date (ie. date has not been logged)
         // books = user.books.current
       // if entries exists for params.date (ie. date has been logged previously)
         // books = entries.forEach(book)
