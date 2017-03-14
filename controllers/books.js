@@ -1,5 +1,6 @@
 const Book = require('../models/book')
 const User = require('../models/user')
+const Daily = require('../models/daily')
 const moment = require('moment')
 
 // Get all the books
@@ -118,50 +119,71 @@ function extractDailiesByBook (dailies, bookId) {
 // Find the current book
 exports.getBook = function (req, res) {
   // Get book-specific data
-  Book.findById(req.params.id).then(function (bookGeneral) {
+  const bookGeneral = Book.findById(req.params.id)
+    .select(['_id', 'title', 'authors', 'thumbnailUrl'])
+
+  const bookPersonal = User.findById(req.user._id)
+    .populate({
+      path: 'dailies',
+      select: ['_id', 'date', 'book_id', 'currentPage'],
+      match: {
+        'book_id': req.params.id
+      },
+      options: {
+        sort: { date: -1 }
+      }
+    })
+    .select([
+      'dailies',
+      'books'
+    ])
+    .exec()
+
+  Promise.all([bookGeneral, bookPersonal]).then((results) => {
     // Get user specific data
-    const bookPersonal = req.user.books.find((item) => {
+    const bookPersonal = results[1].books.find((item) => {
       return (item.book_id.toString() === req.params.id.toString())
     })
 
-    const slimDailies = extractDailiesByBook(req.user.dailies, req.params.id)
-
-    // Respond with a combined book object with all the info the client needs
     res.send({
       status: bookPersonal.status[0],
       totalPages: bookPersonal.totalPages,
-      dailies: slimDailies,
+      dailies: results[1].dailies,
       notes: bookPersonal.notes,
-      _id: bookGeneral._id,
-      thumbnailUrl: bookGeneral.thumbnailUrl,
-      authors: bookGeneral.authors,
-      title: bookGeneral.title
+      _id: results[0]._id,
+      thumbnailUrl: results[0].thumbnailUrl,
+      authors: results[0].authors,
+      title: results[0].title
     })
-  }).catch(function (error) {
-    console.error(error)
-    return res.status(404).send({ message: `You don't any books that match the id ${req.params.id}.` })
+  }).catch((error) => {
+    return res.status(404).send({ message: `Error getting book: ${error}` })
   })
 }
 
 // Add a daily to a given book
 exports.createDaily = function (req, res) {
-  const newDaily = {
+  const newDaily = new Daily({
     date: req.body.date,
+    user_id: req.user._id,
     book_id: req.body.book_id,
     currentPage: req.body.currentPage
-  }
-
-  // Construct query
-  const query = {
-    '_id': req.user._id
-  }
-
-  // Apply the update and respond
-  User.findOneAndUpdate(query, { $push: { dailies: newDaily } }, { new: true }, function (err, updatedUser) {
-    if (err) return console.error(err)
-    const freshDailies = extractDailiesByBook(updatedUser.dailies, newDaily.book_id)
-    res.send(freshDailies)
   })
+
+  let savedDaily
+
+  // Save Daily document
+  newDaily.save().then((newDaily) => {
+    // Save daily to scope so we can respond with it
+    savedDaily = newDaily
+
+    // Add daily to User document
+    return User.findByIdAndUpdate(req.user._id, { $push: { dailies: savedDaily._id } })
+  }).then((oldUser) => {
+    res.send(savedDaily)
+  }).catch((error) => {
+    console.log(error)
+    return res.status(404).send({ message: error })
+  });
 }
 
 // Update a daily that already exists
@@ -189,7 +211,7 @@ exports.updateDaily = function (req, res) {
 }
 
 // Get dailies around a given date
-exports.getDailies = function (req, res) {
+exports.getDailiesByDate = function (req, res) {
   User
     .findOne({ '_id': req.user._id }, 'books dailies')
     .populate({

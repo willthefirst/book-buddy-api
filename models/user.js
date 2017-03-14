@@ -44,22 +44,9 @@ const UserSchema = new Schema({
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   books: [BookPersonalSchema],
-  dailies:  [{
-    date: {
-      type: Date,
-      required: true
-    },
-    book_id: {
-      type: Schema.Types.ObjectId,
-      ref: 'Book',
-      required: true
-    },
-    currentPage: {
-      type: Number,
-      required: true
-    }
-  }, {
-    timestamps: true
+  dailies: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Daily'
   }]
 })
 
