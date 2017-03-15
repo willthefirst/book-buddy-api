@@ -81,39 +81,6 @@ exports.createBook = function (req, res) {
   })
 }
 
-function extractDailiesByBook (dailies, bookId) {
-  let slimDailies = []
-
-  // Get only entries that correspond to the book_id
-  dailies.forEach((entry) => {
-    if (entry.book_id.toString() === bookId.toString()) {
-      slimDailies.push({
-        daily_id: entry._id,
-        book_id: entry.book_id,
-        date: entry.date,
-        currentPage: entry.currentPage
-      })
-    }
-  })
-
-  // Sort entries by date #todo does this need to happen here?
-  slimDailies.sort(function (a, b) {
-    return b.date - a.date
-  })
-
-  // Reformat date once sorted
-  slimDailies = slimDailies.map((entry) => {
-    return {
-      daily_id: entry.daily_id,
-      book_id: entry.book_id,
-      currentPage: entry.currentPage,
-      date: moment(entry.date).format('MM/DD/YYYY')
-    }
-  })
-  // console.log(slimDailies);
-  return slimDailies
-}
-
 // Find the current book
 exports.getBook = function (req, res) {
   // Get book-specific data
@@ -160,43 +127,67 @@ exports.getBook = function (req, res) {
 
 // Add a daily to a given book
 exports.createDaily = function (req, res) {
-  const newDaily = new Daily({
+  const newDaily = {
     date: req.body.date,
     user_id: req.user._id,
     book_id: req.body.book_id,
     currentPage: req.body.currentPage
-  })
+  }
 
-  let savedDaily
-
-  let queryOptions = {
-    path: 'dailies',
-    match: {},
-    options: {
-      sort: { date: -1 }
+  // If daily with same book and day exists for user, update it
+  // There should only ever be one daily per book per day
+  Daily.findOneAndUpdate(
+    {
+      date: newDaily.date,
+      user_id: newDaily.user_id,
+      book_id: newDaily.book_id
+    },
+    newDaily,
+    {
+      upsert: true,
+      new: true
     }
-  }
+  ).then((newDaily) => {
 
-  // If request specifies a minimum date, only retrieve dailies after that date
-  if (req.body.filterByThisBook) {
-    queryOptions.match['book_id'] = req.body.book_id
-  }
+    // Setting up how we'd like data returned
+    let queryOptions = {
+      path: 'dailies',
+      match: {},
+      options: {
+        sort: { date: -1 }
+      },
+      populate: {
+        path: 'book_id',
+        select: ['thumbnailUrl', 'title', 'authors']
+      }
+    }
 
-  // Save Daily document
-  newDaily.save().then((newDaily) => {
-    // Save daily to scope so we can respond with it
-    savedDaily = newDaily
+    // If request specifies a minimum date, only retrieve dailies after that date
+    if (req.body.filterByThisBook) {
+      queryOptions.match['book_id'] = req.body.book_id
+    }
 
     // Add daily to User document
     return User.findByIdAndUpdate(
       req.user._id,
-      { $push: { dailies: savedDaily._id } },
+      { $addToSet: { dailies: newDaily._id } },
       { new: true })
       .populate(queryOptions)
       .exec()
   }).then((newUser) => {
-    console.log(newUser);
-    res.send(newUser.dailies)
+    // #todo these populate moves for daily are repeated, turn into function
+    const dailies = newUser.dailies.map((daily) => {
+      return {
+        daily_id: daily._id,
+        date: daily.date,
+        book_id: daily.book_id._id,
+        thumbnailUrl: daily.book_id.thumbnailUrl,
+        authors: daily.book_id.authors,
+        title: daily.book_id.title,
+        currentPage: daily.currentPage
+      }
+    })
+    res.send(dailies)
   }).catch((error) => {
     console.log(error)
     return res.status(404).send({ message: error })
@@ -212,8 +203,6 @@ exports.updateDaily = function (req, res) {
     '_id': req.user._id,
     'dailies._id': req.params.id
   }
-
-  // console.log(query);
 
   // Apply the update and respond
   User.findOneAndUpdate(query, { $set: { 'dailies.$.currentPage': updateCurrentPage } }, { new: true }, function (err, updatedUser) {
