@@ -128,7 +128,7 @@ exports.getBook = function (req, res) {
 // Add a daily to a given book
 exports.createDaily = function (req, res) {
   const newDaily = {
-    date: req.body.date,
+    date: moment(new Date(req.body.date)).format('YYYY-MM-DD'),
     user_id: req.user._id,
     book_id: req.body.book_id,
     currentPage: req.body.currentPage
@@ -145,7 +145,8 @@ exports.createDaily = function (req, res) {
     newDaily,
     {
       upsert: true,
-      new: true
+      new: true,
+      runValidators: true
     }
   ).then((newDaily) => {
 
@@ -162,7 +163,7 @@ exports.createDaily = function (req, res) {
       }
     }
 
-    // If request specifies a minimum date, only retrieve dailies after that date
+    // If request asks for dailies for a specific book, update the query
     if (req.body.filterByThisBook) {
       queryOptions.match['book_id'] = req.body.book_id
     }
@@ -190,30 +191,8 @@ exports.createDaily = function (req, res) {
     res.send(dailies)
   }).catch((error) => {
     console.log(error)
-    return res.status(404).send({ message: error })
+    return res.status(404).send({ message: error.message })
   });
-}
-
-// Update a daily that already exists
-exports.updateDaily = function (req, res) {
-  const updateCurrentPage = req.body.currentPage
-
-  // Construct query
-  const query = {
-    '_id': req.user._id,
-    'dailies._id': req.params.id
-  }
-
-  // Apply the update and respond
-  User.findOneAndUpdate(query, { $set: { 'dailies.$.currentPage': updateCurrentPage } }, { new: true }, function (err, updatedUser) {
-    if (err) return console.error(err)
-    // console.log(updatedUser);
-    const updatedDaily = updatedUser.dailies.find( (daily) => {
-      return daily._id.toString() === req.params.id.toString()
-    })
-
-    res.send(updatedDaily)
-  })
 }
 
 // Get dailies around a given date

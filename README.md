@@ -19,3 +19,7 @@ node_modules/.bin/migrate list --config config/migrate.json
 node_modules/.bin/migrate --config config/migrate.json up <migration_name>
 
 A slight weirdness here: first run the migration, then update the model in /models.js
+
+## Daily date format
+
+Dailies are stored as strings in MongoDB in a timezone agnostic format: YYYY-MM-DD

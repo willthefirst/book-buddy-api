@@ -8,7 +8,8 @@ const DailySchema = mongoose.Schema({
     required: true
   },
   date: {
-    type: Date,
+    type: String,
+    match: [/[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])/, '{VALUE} must be formatted YYYY-MM-DD'],
     required: true
   },
   book_id: {
