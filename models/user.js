@@ -11,9 +11,9 @@ const BookPersonalSchema = new Schema({
     required: true
   },
   status: {
-    type: Array,
-    default: 'Queue',
-    enum: ['Queue', 'Current', 'Finished']
+    type: String,
+    default: 'queue',
+    enum: ['queue', 'current', 'finished']
   },
   totalPages: {
     type: Number,

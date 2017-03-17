@@ -41,7 +41,7 @@ module.exports = function (app) {
   // =========================
 
   // Get all user books
-  apiRoutes.get('/books', requireAuth, BooksController.getAllBooks)
+  apiRoutes.get('/books', requireAuth, BooksController.getBooks)
 
   // Create book
   apiRoutes.post('/books', requireAuth, BooksController.createBook)
