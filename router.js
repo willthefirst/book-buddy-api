@@ -66,4 +66,7 @@ module.exports = function (app) {
 
   // POST: create or update a daily
   apiRoutes.post('/dailies', requireAuth, BooksController.createDaily)
+
+  // DELETE: delete a daily
+  apiRoutes.delete('/dailies', requireAuth, BooksController.deleteDaily)
 }

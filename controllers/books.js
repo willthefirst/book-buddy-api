@@ -150,6 +150,22 @@ exports.getBook = function (req, res) {
   })
 }
 
+
+let dailyDefaults = {
+  populateOptions: {
+    path: 'dailies',
+    match: {},
+    options: {
+      sort: { date: -1 }
+    },
+    populate: {
+      path: 'book_id',
+      select: ['thumbnailUrl', 'title', 'authors']
+    }
+  }
+}
+
+
 // Add a daily to a given book
 exports.createDaily = function (req, res) {
   const newDaily = {
@@ -176,17 +192,7 @@ exports.createDaily = function (req, res) {
   ).then((newDaily) => {
 
     // Setting up how we'd like data returned
-    let queryOptions = {
-      path: 'dailies',
-      match: {},
-      options: {
-        sort: { date: -1 }
-      },
-      populate: {
-        path: 'book_id',
-        select: ['thumbnailUrl', 'title', 'authors']
-      }
-    }
+    let queryOptions = dailyDefaults.populateOptions
 
     // If request asks for dailies for a specific book, update the query
     if (req.body.filterByThisBook) {
@@ -220,65 +226,117 @@ exports.createDaily = function (req, res) {
     });
   }
 
-  // Get dailies around a given date
-  // Params allowed:
-  // date: doesn't do anything yet!
-  // dateMin: only return dailies after this date, defaults to none
-  // bookID: only return dailies for this book, defaults none
-  exports.getDailiesByDate = function (req, res) {
-    const dateQuery = moment.utc(new Date(req.query.date)) || moment.utc()
+// Get dailies around a given date
+// Params allowed:
+// date: doesn't do anything yet!
+// dateMin: only return dailies after this date, defaults to none
+// bookID: only return dailies for this book, defaults none
+exports.getDailiesByDate = function (req, res) {
+  const dateQuery = moment.utc(new Date(req.query.date)) || moment.utc()
 
-    let queryOptions = {
-      path: 'dailies',
-      select: ['_id', 'date', 'book_id', 'currentPage'],
-      options: {
-        sort: { date: -1 }
-      },
-      match: {},
-      populate: {
-        path: 'book_id',
-        select: ['thumbnailUrl', 'title', 'authors']
-      }
-    }
-
-    // If request specifies a minimum date, only retrieve dailies after that date
-    if (req.query.dateMin) {
-      queryOptions.match['date'] = {
-        '$gt': moment.utc(req.query.dateMin)
-      }
-    }
-
-    // If request specifies dailies for a particular book,
-    // only return dailies for that book
-    if (req.query.bookId) {
-      queryOptions.match['book_id'] = req.query.bookId
-    }
-
-    // Get dailies from specific user
-    User
-    .findOne({ '_id': req.user._id }, 'books dailies')
-    .populate(queryOptions)
-    .populate({
-      path: 'books.book_id',
+  let queryOptions = {
+    path: 'dailies',
+    select: ['_id', 'date', 'book_id', 'currentPage'],
+    options: {
+      sort: { date: -1 }
+    },
+    match: {},
+    populate: {
+      path: 'book_id',
       select: ['thumbnailUrl', 'title', 'authors']
-    })
-    .exec()
-    .then((user) => {
-      // // Get user's current books
-      // const currentBooks = [];
-      //
-      // user.books.forEach((book) => {
-      //   if (book.status[0] === "Current") {
-      //     currentBooks.push({
-      //       book_id: book.book_id._id,
-      //       thumbnailUrl: book.book_id.thumbnailUrl,
-      //       authors: book.book_id.authors,
-      //       title: book.book_id.title
-      //     })
-      //   }
-      // })
+    }
+  }
 
-      const dailies = user.dailies.map((daily) => {
+  // If request specifies a minimum date, only retrieve dailies after that date
+  if (req.query.dateMin) {
+    queryOptions.match['date'] = {
+      '$gt': moment.utc(req.query.dateMin)
+    }
+  }
+
+  // If request specifies dailies for a particular book,
+  // only return dailies for that book
+  if (req.query.bookId) {
+    queryOptions.match['book_id'] = req.query.bookId
+  }
+
+  // Get dailies from specific user
+  User
+  .findOne({ '_id': req.user._id }, 'books dailies')
+  .populate(queryOptions)
+  .populate({
+    path: 'books.book_id',
+    select: ['thumbnailUrl', 'title', 'authors']
+  })
+  .exec()
+  .then((user) => {
+    // // Get user's current books
+    // const currentBooks = [];
+    //
+    // user.books.forEach((book) => {
+    //   if (book.status[0] === "Current") {
+    //     currentBooks.push({
+    //       book_id: book.book_id._id,
+    //       thumbnailUrl: book.book_id.thumbnailUrl,
+    //       authors: book.book_id.authors,
+    //       title: book.book_id.title
+    //     })
+    //   }
+    // })
+
+    const dailies = user.dailies.map((daily) => {
+      return {
+        daily_id: daily._id,
+        date: daily.date,
+        book_id: daily.book_id._id,
+        thumbnailUrl: daily.book_id.thumbnailUrl,
+        authors: daily.book_id.authors,
+        title: daily.book_id.title,
+        currentPage: daily.currentPage
+      }
+    })
+
+    res.send(dailies);
+  }).catch(function (error) {
+    return res.status(404).send({ message: error })
+  })
+}
+
+exports.deleteDaily = function (req, res) {
+  console.log(req.user);
+  console.log({
+    date: req.body.date,
+    book_id: req.body.book_id,
+    user_id: req.user._id
+  });
+
+  Daily.findOneAndRemove({
+    date: req.body.date,
+    book_id: req.body.book_id,
+    user_id: req.user._id
+  }).exec().then((daily) => {
+    if (!daily) {
+      res.send('Nothing to delete')
+      return
+    }
+
+    User
+    .findOneAndUpdate(
+      { '_id': req.user._id },
+      {
+        $pull: {
+          dailies: daily._id
+        }
+      },
+      {
+        select: 'dailies',
+        new: true
+      }
+    )
+    .populate(dailyDefaults.populateOptions)
+    .exec()
+    .then((newUser) => {
+      const dailies = newUser.dailies.map((daily) => {
         return {
           daily_id: daily._id,
           date: daily.date,
@@ -289,55 +347,56 @@ exports.createDaily = function (req, res) {
           currentPage: daily.currentPage
         }
       })
-
-      res.send(dailies);
-    }).catch(function (error) {
+      res.send(dailies)
+    })
+    .catch((error) => {
       return res.status(404).send({ message: error })
     })
+  })
+}
+
+// Update the current book
+exports.updateBook = function (req, res) {
+  const requestedUpdate = req.body
+
+  // Construct query
+  const query = {
+    '_id': req.user._id,
+    'books.book_id': req.params.id
   }
 
-  // Update the current book
-  exports.updateBook = function (req, res) {
-    const requestedUpdate = req.body
-
-    // Construct query
-    const query = {
-      '_id': req.user._id,
-      'books.book_id': req.params.id
-    }
-
-    // Construct granular update of subdocs dynamically.
-    // Update the specified book with whatever parameters provided by request
-    const update = {}
-    for (let key in requestedUpdate) {
-      update[`books.$.${key}`] = requestedUpdate[key]
-    }
-
-    // Apply the update and respond
-    User.findOneAndUpdate(query, { $set: update }, { new: true }, function (err, updatedUser) {
-      if (err) return console.error(err)
-      res.send(requestedUpdate)
-    })
+  // Construct granular update of subdocs dynamically.
+  // Update the specified book with whatever parameters provided by request
+  const update = {}
+  for (let key in requestedUpdate) {
+    update[`books.$.${key}`] = requestedUpdate[key]
   }
 
-  // Delete the current book
-  exports.deleteBook = function (req, res) {
-    const removeBookFromUser = User.findOneAndUpdate(
-      { '_id': req.user._id },
-      {
-        '$pull': {
-          books: { book_id: req.params.id }
-        }
+  // Apply the update and respond
+  User.findOneAndUpdate(query, { $set: update }, { new: true }, function (err, updatedUser) {
+    if (err) return console.error(err)
+    res.send(requestedUpdate)
+  })
+}
+
+// Delete the current book
+exports.deleteBook = function (req, res) {
+  const removeBookFromUser = User.findOneAndUpdate(
+    { '_id': req.user._id },
+    {
+      '$pull': {
+        books: { book_id: req.params.id }
       }
-    )
-    const removeUserFromBook = Book.findOneAndUpdate(
-      { '_id': req.params.id },
-      { '$pull': { users: req.user._id } }
-    )
+    }
+  )
+  const removeUserFromBook = Book.findOneAndUpdate(
+    { '_id': req.params.id },
+    { '$pull': { users: req.user._id } }
+  )
 
-    Promise.all([removeBookFromUser, removeUserFromBook]).then(function (results) {
-      res.send(results)
-    }).catch(function (error) {
-      console.log('Error deleting book:', error)
-    })
-  }
+  Promise.all([removeBookFromUser, removeUserFromBook]).then(function (results) {
+    res.send(results)
+  }).catch(function (error) {
+    console.log('Error deleting book:', error)
+  })
+}
