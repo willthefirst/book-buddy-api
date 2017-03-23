@@ -61,7 +61,6 @@ exports.createBook = function (req, res) {
   promise.then(function (book) {
     if (!book) {
       // If book doesn't already exists in our db, add it. Once added, return to next promise.
-      console.log('Book does not exists yet, creating it...')
       let newBook = {
         title: req.body.title,
         authors: req.body.authors,
@@ -84,14 +83,12 @@ exports.createBook = function (req, res) {
     }
     req.user.books.push(bookPersonal)
     const saveBookToUser = req.user.save().then(function (user) {
-      console.log(`Added book ${book.title} to user ${req.user.email}`)
       return user
     })
 
     // Save user to book
     book.users.push(req.user._id)
     const saveUserToBook = book.save().then(function (book) {
-      console.log(`Added user ${req.user.email} to book ${book.title}`)
       return book
     })
 
@@ -102,7 +99,7 @@ exports.createBook = function (req, res) {
     const updatedBook = results[1]
     res.send(updatedBook)
   }).catch(function (error) {
-    console.log('Error creating book:', error)
+    return res.status(404).send({ message: `Error creating book: ${error}` })
   })
 }
 
@@ -221,7 +218,6 @@ exports.createDaily = function (req, res) {
       })
       res.send(dailies)
     }).catch((error) => {
-      console.log(error)
       return res.status(404).send({ message: error.message })
     });
   }
@@ -270,20 +266,6 @@ exports.getDailiesByDate = function (req, res) {
   })
   .exec()
   .then((user) => {
-    // // Get user's current books
-    // const currentBooks = [];
-    //
-    // user.books.forEach((book) => {
-    //   if (book.status[0] === "Current") {
-    //     currentBooks.push({
-    //       book_id: book.book_id._id,
-    //       thumbnailUrl: book.book_id.thumbnailUrl,
-    //       authors: book.book_id.authors,
-    //       title: book.book_id.title
-    //     })
-    //   }
-    // })
-
     const dailies = user.dailies.map((daily) => {
       return {
         daily_id: daily._id,
@@ -303,13 +285,6 @@ exports.getDailiesByDate = function (req, res) {
 }
 
 exports.deleteDaily = function (req, res) {
-  console.log(req.user);
-  console.log({
-    date: req.body.date,
-    book_id: req.body.book_id,
-    user_id: req.user._id
-  });
-
   Daily.findOneAndRemove({
     date: req.body.date,
     book_id: req.body.book_id,
@@ -397,6 +372,6 @@ exports.deleteBook = function (req, res) {
   Promise.all([removeBookFromUser, removeUserFromBook]).then(function (results) {
     res.send(results)
   }).catch(function (error) {
-    console.log('Error deleting book:', error)
+    return res.status(404).send({ message: `Error deleteing book: ${error}` })
   })
 }
