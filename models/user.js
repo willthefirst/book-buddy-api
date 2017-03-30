@@ -43,6 +43,8 @@ const UserSchema = new Schema({
   },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  verifyEmailToken: { type: String, required: true, unique: true },
+  isVerified: { type: Boolean, required: true, unique: true, default: false },
   books: [BookPersonalSchema],
   dailies: [{
     type: Schema.Types.ObjectId,

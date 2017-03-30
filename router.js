@@ -24,11 +24,20 @@ module.exports = function (app) {
   // Registration route /api/auth/register
   authRoutes.post('/register', AuthenticationController.register)
 
+  // Verify email route /api/auth/verify-email/:token
+  authRoutes.post('/verify-email/:token', AuthenticationController.verifyEmail)
+
   // Login route /api/auth/login
   authRoutes.post('/login', AuthenticationController.login)
 
   // Refresh user details from already existing token.
   authRoutes.get('/meFromToken', AuthenticationController.meFromToken)
+
+  // Password reset request route (generate/send token)
+  authRoutes.post('/forgot-password', AuthenticationController.forgotPassword);
+
+  // Password reset route (change password using token)
+  authRoutes.post('/reset-password/:token', AuthenticationController.verifyToken);
 
   // Set url for API group routes
   app.use('/api', apiRoutes)
