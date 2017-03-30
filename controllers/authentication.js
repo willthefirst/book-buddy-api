@@ -91,8 +91,6 @@ exports.register = function (req, res, next) {
       const verifyEmailToken = buffer.toString('hex');
       if (err) { return next(err); }
 
-      console.log(verifyEmailToken);
-
       // If email is unique and password was provided, create account
       let user = new User({
         email: email,
@@ -105,9 +103,9 @@ exports.register = function (req, res, next) {
 
         const message = {
           subject: "Confirm your new Book Buddy account",
-          text: `${'Welcome to Book Buddy!\n\n' +
-            'Please confirm your new account: \n'} +
-            ${process.env.CLIENT_URL}/auth/verify-email/${verifyEmailToken}\n\n`
+          text: `'Welcome to Book Buddy!'\n\n +
+          'Please confirm your new account:'\n\n + 
+          ${process.env.CLIENT_URL}/auth/verify-email/${verifyEmailToken}\n\n`
           };
 
         // Otherwise, send user email via Mailgun

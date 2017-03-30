@@ -4,7 +4,7 @@ const mailgun = require('mailgun-js')({ apiKey: process.env.MAILGUN_PRIV_KEY,
 // Create and export function to send emails through Mailgun API
 exports.sendEmail = function (recipient, message) {
   const data = {
-    from: 'Will <yipyip@bookbuddy.com>',
+    from: 'Will <no-reply@bookbuddy.com>',
     to: recipient,
     subject: message.subject,
     text: message.text

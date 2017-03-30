@@ -24,6 +24,9 @@ const localLogin = new LocalStrategy(localOptions, function (email, password, do
       if (err) { return done(err) }
       if (!isMatch) { return done(null, false, { message: "That's not the right password. Please try again." }) }
 
+      // If user has not confirmed email, block
+      if (!user.isVerified) { return done(null, false, { message: "You still need to confirm your email address. Check your inbox for a confirmation email and click the link inside." }) }
+
       return done(null, user)
     })
   })
@@ -38,7 +41,6 @@ const jwtOptions = {
 
 // Setting up JWT login strategy
 const jwtLogin = new JwtStrategy(jwtOptions, function (payload, done) {
-  console.log(payload);
   User.findById(payload._id, function (err, user) {
     if (err) { return done(err, false) }
 
