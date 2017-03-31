@@ -103,12 +103,12 @@ exports.register = function (req, res, next) {
 
         const message = {
           subject: "Confirm your new Book Buddy account",
-          text: `'Welcome to Book Buddy!'\n\n +
-          'Please confirm your new account:'\n\n + 
-          ${process.env.CLIENT_URL}/auth/verify-email/${verifyEmailToken}\n\n`
-          };
+          text: `${'Welcome to Book Buddy!\n\n' +
+            'Please confirm your new account:\n\n'}` +
+            `${process.env.CLIENT_URL}/auth/verify-email/${verifyEmailToken}\n\n`
+        }
 
-        // Otherwise, send user email via Mailgun
+        // Send user email via Mailgun
         mailgun.sendEmail(user.email, message);
 
         return res.status(200).json({ message: "Almost there: check your inbox for a confirmation email, and click on the the link." });
@@ -125,8 +125,9 @@ exports.register = function (req, res, next) {
 exports.verifyEmail = function (req, res, next) {
   User.findOne({ verifyEmailToken: req.params.token }, (err, verifiedUser) => {
     // If query returned no results, token expired or was invalid. Return error.
-    if (!verifiedUser) {
+    if (!verifiedUser || err) {
       res.status(422).json({ message: 'Sorry, I could not find any user with that email.' });
+      return next(err)
     }
 
     verifiedUser.isVerified = true;
@@ -136,7 +137,6 @@ exports.verifyEmail = function (req, res, next) {
         if (err) return console.error(err);
         res.send({message: 'Your account is live! Please login to get started.'});
     });
-
   });
 };
 
