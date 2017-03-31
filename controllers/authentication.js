@@ -131,7 +131,7 @@ exports.verifyEmail = function (req, res, next) {
     }
 
     verifiedUser.isVerified = true;
-    verifiedUser.verifyEmailToken = 'null';
+    verifiedUser.verifyEmailToken = undefined;
 
     verifiedUser.save(function (err) {
         if (err) return console.error(err);
@@ -196,8 +196,14 @@ exports.forgotPassword = function (req, res, next) {
   exports.verifyToken = function (req, res, next) {
     User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, resetUser) => {
       // If query returned no results, token expired or was invalid. Return error.
-      if (!resetUser) {
+      if (!resetUser || err) {
         res.status(422).json({ message: 'Your token has expired. Please attempt to reset your password again.' });
+        return next(err)
+      }
+
+      if (req.body.password !== req.body.confirmPassword) {
+        res.status(422).json({ message: 'Make sure your passwords match.' });
+        return next()
       }
 
       // Otherwise, save new password and clear resetToken from database
