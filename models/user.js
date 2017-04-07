@@ -45,7 +45,8 @@ const UserSchema = new Schema({
   resetPasswordExpires: { type: Date },
   verifyEmailToken: {
     type: String,
-    unique: true
+    unique: true,
+    sparse: true
   },
   isVerified: {
     type: Boolean,

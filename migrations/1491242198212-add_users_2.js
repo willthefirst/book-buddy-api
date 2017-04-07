@@ -4,9 +4,11 @@ const User = require('../models/user')
  */
 export async function up () {
   // Write migration here
-  await User.update({$eq: 'isVerified'}, {
-    $unset: { unique: '' }
-  }, { multi: true });
+  // console.log(User.schema);
+  // await User.update({$eq: 'isVerified'}, {
+  //   $unset: { unique: '' }
+  // }, { multi: true });
+  await this('User').find()
 }
 
 /**
