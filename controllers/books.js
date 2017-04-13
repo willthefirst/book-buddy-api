@@ -46,7 +46,7 @@ exports.getBooks = function (req, res) {
           return regEx.test(book.title)
         })
       }
-
+      
       res.send(results)
     }
   })

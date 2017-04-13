@@ -178,53 +178,53 @@ exports.forgotPassword = function (req, res, next) {
             'Please click on the following link, or paste this into your browser to complete the process:\n'}
             ${process.env.CLIENT_URL}/auth/reset-password/${resetToken}\n\n` +
             `If you did not request this, please ignore this email and your password will remain unchanged.\n`
-          };
-
-          // Otherwise, send user email via Mailgun
-          mailgun.sendEmail(existingUser.email, message);
-
-          return res.status(200).json({ message: "Thank you kindly. Now, go check your email. I just sent you an email with a link to reset your password." });
-        });
-      });
-    });
-  };
-
-  //= =======================================
-  // Reset Password Route
-  //= =======================================
-
-  exports.verifyToken = function (req, res, next) {
-    User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, resetUser) => {
-      // If query returned no results, token expired or was invalid. Return error.
-      if (!resetUser || err) {
-        res.status(422).json({ message: 'Your token has expired. Please attempt to reset your password again.' });
-        return next(err)
-      }
-
-      if (req.body.password !== req.body.confirmPassword) {
-        res.status(422).json({ message: 'Make sure your passwords match.' });
-        return next()
-      }
-
-      // Otherwise, save new password and clear resetToken from database
-      resetUser.password = req.body.password;
-      resetUser.resetPasswordToken = undefined;
-      resetUser.resetPasswordExpires = undefined;
-
-      resetUser.save((err) => {
-        if (err) { return next(err); }
-
-        // If password change saved successfully, alert user via email
-        const message = {
-          subject: 'Password Changed',
-          text: 'You are receiving this email because you changed your password. \n\n' +
-          'If you did not request this change, please contact us immediately.'
         };
 
-        // Otherwise, send user email confirmation of password change via Mailgun
-        mailgun.sendEmail(resetUser.email, message);
+        // Otherwise, send user email via Mailgun
+        mailgun.sendEmail(existingUser.email, message);
 
-        return res.status(200).json({ message: 'Password changed successfully. Please login with your new password.' });
+        return res.status(200).json({ message: "Thank you kindly. Now, go check your email. I just sent you an email with a link to reset your password." });
       });
     });
-  };
+  });
+};
+
+//= =======================================
+// Reset Password Route
+//= =======================================
+
+exports.verifyToken = function (req, res, next) {
+  User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, resetUser) => {
+    // If query returned no results, token expired or was invalid. Return error.
+    if (!resetUser || err) {
+      res.status(422).json({ message: 'Your token has expired. Please attempt to reset your password again.' });
+      return next(err)
+    }
+
+    if (req.body.password !== req.body.confirmPassword) {
+      res.status(422).json({ message: 'Make sure your passwords match.' });
+      return next()
+    }
+
+    // Otherwise, save new password and clear resetToken from database
+    resetUser.password = req.body.password;
+    resetUser.resetPasswordToken = undefined;
+    resetUser.resetPasswordExpires = undefined;
+
+    resetUser.save((err) => {
+      if (err) { return next(err); }
+
+      // If password change saved successfully, alert user via email
+      const message = {
+        subject: 'Password Changed',
+        text: 'You are receiving this email because you changed your password. \n\n' +
+        'If you did not request this change, please contact us immediately.'
+      };
+
+      // Otherwise, send user email confirmation of password change via Mailgun
+      mailgun.sendEmail(resetUser.email, message);
+
+      return res.status(200).json({ message: 'Password changed successfully. Please login with your new password.' });
+    });
+  });
+};

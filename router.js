@@ -7,8 +7,6 @@ const passport = require('passport')
 // Middleware to require login/auth
 const requireAuth = passport.authenticate('jwt', { session: false })
 
-// (this.req, this.res, this.next);
-
 module.exports = function (app) {
   // Initializing route groups
   const apiRoutes = express.Router()
