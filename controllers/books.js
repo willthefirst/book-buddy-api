@@ -46,7 +46,7 @@ exports.getBooks = function (req, res) {
           return regEx.test(book.title)
         })
       }
-      
+
       res.send(results)
     }
   })
@@ -218,6 +218,7 @@ exports.createDaily = function (req, res) {
       })
       res.send(dailies)
     }).catch((error) => {
+      console.log(error);
       return res.status(404).send({ message: error.message })
     });
   }
