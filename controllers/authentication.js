@@ -6,7 +6,7 @@ const mailgun = require('../config/mailgun');
 
 function generateToken (user) {
   return jwt.sign(user, process.env.SERVER_SECRET, {
-    expiresIn: 10080 // in seconds
+    expiresIn: 7*24*60*60 // in days
   })
 }
 
@@ -102,8 +102,8 @@ exports.register = function (req, res, next) {
         if (err) { return next(err) }
 
         const message = {
-          subject: "Confirm your new Book Buddy account",
-          text: `${'Welcome to Book Buddy!\n\n' +
+          subject: "Confirm your new BookBuddy account",
+          text: `${'Welcome to BookBuddy!\n\n' +
             'Please confirm your new account:\n\n'}` +
             `${process.env.CLIENT_URL}/auth/verify-email/${verifyEmailToken}\n\n`
         }
