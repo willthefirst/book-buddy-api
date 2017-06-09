@@ -131,7 +131,7 @@ exports.getBook = function (req, res) {
     const bookPersonal = results[1].books.find((item) => {
       return (item.book_id.toString() === req.params.id.toString())
     })
-
+    
     res.send({
       status: bookPersonal.status,
       totalPages: bookPersonal.totalPages,

@@ -111,7 +111,13 @@ exports.register = function (req, res, next) {
         // Send user email via Mailgun
         mailgun.sendEmail(user.email, message);
 
-        return res.status(200).json({ message: "Almost there: check your inbox for a confirmation email, and click on the the link." });
+        return res.status(200).json(
+          {
+            _id: user._id,
+            email: user.email,
+            message: "Almost there: check your inbox for a confirmation email, and click on the the link."
+          }
+        );
       });
     })
   })
@@ -134,8 +140,11 @@ exports.verifyEmail = function (req, res, next) {
     verifiedUser.verifyEmailToken = undefined;
 
     verifiedUser.save(function (err) {
-        if (err) return console.error(err);
-        res.send({message: 'Your account is live! Please login to get started.'});
+      if (err) return console.error(err);
+      res.send({
+        message: 'Your account is live! Please login to get started.',
+        _id: verifiedUser._id
+      });
     });
   });
 };
